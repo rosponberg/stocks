@@ -10,13 +10,13 @@ class ModernPortfolioTheory(SecurityGroup):
     """
     ModernPortfolioTheory.__init__() constructs the ModernPortfolioTheory object
     securities          The SecurityData objects to group (*SecurityData)
-    returns             The constructed ModernPortfolioTheory object (ModernPortfolioTheory)
+    returns the constructed ModernPortfolioTheory object (ModernPortfolioTheory)
     """
     def __init__(self, *securities):
         super().__init__(*securities)
         self._securities = self.overlap().normalize().securities
         
-        self._security_len = self._securities[0].len
+        self._securityLen = self._securities[0].len
         self._years = self._securities[0].years
         self._days = self._securities[0].days
 
@@ -36,8 +36,8 @@ class ModernPortfolioTheory(SecurityGroup):
         return self._securities
 
     @property
-    def security_len(self):
-        return self._security_len
+    def securityLen(self):
+        return self._securityLen
 
     @property
     def years(self):
@@ -51,10 +51,14 @@ class ModernPortfolioTheory(SecurityGroup):
     def cov(self):
         return self._cov
 
+    @property
+    def returns(self):
+        return self._returns
+
     """
     ModernPortfolioTheory.from_tickers() constructs the ModernPortfolioTheory object using tickers
     tickers             The tickers to scrape data from (*str)
-    returns             The constructed SecurityGroup object
+    returns the constructed SecurityGroup object
     """
     def from_tickers(*tickers):
         securities = []
@@ -70,27 +74,27 @@ class ModernPortfolioTheory(SecurityGroup):
     """ 
     ModernPortfolioTheory.vol() returns the expected volaility based on a certain weight vector
     weights              The weight vector (list)
-    returns             The expected volaility for the weight vector (float)
+    returns the expected volaility for the weight vector (float)
     """
     def vol(self, weights):
         var = self.cov.mul(weights, axis=0)
         var = var.mul(weights, axis=1)
         var = var.sum().sum()
-        return sqrt(var * round(252 * self.security_len / self.days))
+        return sqrt(var * round(252 * self.securityLen / self.days))
 
     """ 
     ModernPortfolioTheory.ret() returns the expected return based on a certain weight vector
     weights             The weight vector (list)
-    returns             The expected return for the weight vector (float)
+    returns the expected return for the weight vector (float)
     """
     def ret(self, weights):
-        return np.dot(weights, self._returns)
+        return np.dot(weights, self.returns)
 
     """ 
     ModernPortfolioTheory.sharpe() returns the expected sharpe ratio based on a certain weight vector
     weights             The weight vector (list)
     rfr                 The risk-free rate (float)
-    returns             The expected sharpe ratio for the weight vector (float)
+    returns the expected sharpe ratio for the weight vector (float)
     """
     def sharpe(self, weights, rfr=0):
         return (self.ret(weights) - rfr) / self.vol(weights)
@@ -142,44 +146,45 @@ class ModernPortfolioTheory(SecurityGroup):
     rebalanceWeeks          The rebalance period to backtest
     verbose                 Whether to print the progress of the optimization
     epsilon                 The minimium weight that will not be chopped at each iteration
+    returns two lists corresponding to the securities and the weights of the optimized values (SecurityData[], float[])
     """
     def iterative_optimize(self, sampleSize, iters, ret=0, vol=None, bounds=(0,1), rebalanceWeeks=12, verbose=True, epsilon=0.01):
-        portfolio = []
-        portfolio_weights = []
-        max_sharpe = 0
+        maxSecs = []
+        maxWeights = []
+        maxSharpe = 0
 
         for _ in range(iters):
             sample = np.random.choice(self.securities, size=sampleSize).tolist()
-            sample.extend(portfolio)
+            sample.extend(maxSecs)
             sample = list(set(sample)) 
 
             mpt = ModernPortfolioTheory(*sample)
             res = mpt.optimize(ret=ret, vol=vol, bounds=bounds)
             weights = res.x
-            mpt_sharpe = mpt.sharpe(weights)
+            mptSharpe = mpt.sharpe(weights)
 
             sample = [sample[i] for i in range(len(weights)) if weights[i] >= epsilon]
             weights = [weights[i] for i in range(len(weights)) if weights[i] >= epsilon]
 
             backtest = SecurityGroup(*sample).portfolio(weights, rebalanceWeeks)
-            real_sharpe = backtest.sharpe()
+            realSharpe = backtest.sharpe()
 
-            if real_sharpe > max_sharpe:
-                max_sharpe = real_sharpe
-                portfolio = sample
-                portfolio_weights = weights
+            if realSharpe > maxSharpe:
+                maxSharpe = realSharpe
+                maxSecs = sample
+                maxWeights = weights
 
                 # Print
                 if verbose:
-                    tickers = [sec.ticker for sec in portfolio]
+                    tickers = [sec.ticker for sec in maxSecs]
                     print("Trial No.", _ + 1)
                     print("\t".join(tickers))
                     print("\t".join([str(round(w*100, 2)) for w in weights]))
-                    print("Backtest Sharpe:", round(real_sharpe, 3))
-                    print("Theoretical Sharpe:", round(mpt_sharpe, 3))
+                    print("Backtest Sharpe:", round(realSharpe, 3))
+                    print("Theoretical Sharpe:", round(mptSharpe, 3))
                     print()
 
-        return portfolio, portfolio_weights
+        return maxSecs, maxWeights
 
     """
     ModernPortfolioTheory.__graph() creates a scatter plot of sharpe values
@@ -187,6 +192,7 @@ class ModernPortfolioTheory(SecurityGroup):
     y               The returns (list)
     maxSharpe       The maximum sharpe ratio of the dataset (float)
     plt             The matplotlib.pyplot object (matplotlib.pyplot)
+    returns         None
     """
     def __graph(x, y, maxSharpe, plt):
         plt.figure(facecolor='black')
@@ -210,6 +216,7 @@ class ModernPortfolioTheory(SecurityGroup):
     """
     ModernPortfolioThoery.__get_efficient_frontier() returns the efficient frontier
     points              The number of points to include (int)
+    returns the lists corresponding to the x and y values of the points (float[], float[])
     """
     def __get_efficient_frontier(self, points = 25):
         returns = [sec.ret(annualize=True) for sec in self._securities]
@@ -224,6 +231,7 @@ class ModernPortfolioTheory(SecurityGroup):
     ModernPortfolioTheory.show_efficent_frontier() graphs the efficient frontier
     plt                 The matplotlib.pyplot object (matplotlib.pyplot)
     points              The number of points to include (int)
+    returns             None
     """
     def show_efficent_frontier(self, plt, points=25):
         x, y = self.__get_efficient_frontier(points=points)
@@ -234,6 +242,7 @@ class ModernPortfolioTheory(SecurityGroup):
     ModernPortfolioTheory.show() graphs random portfolios
     plt             The matplotlib.pyplot object (matplotlib.pyplot)
     samples         The number of points to graph (int)
+    returns         None
     """
     def show(self, plt, samples=500):
         weights = np.random.rand(samples, self.len)

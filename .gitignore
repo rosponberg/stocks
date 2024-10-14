@@ -1,9 +1,8 @@
 # Project Files
 data/
 main.py
-SCREEN.csv
+*.csv
 10y_tickers
-
 
 __pycache__/
 *.py[cod]

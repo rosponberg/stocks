@@ -142,7 +142,7 @@ class SecurityData:
     #  ============= Data Manipulation Methods =============
     """
     SecurityData.normalize_price_data() normalizes all the price columns to start at 1
-    returns         A new SecurityData object corresponding to the normalized data (SecurityData)
+    returns a new SecurityData object corresponding to the normalized data (SecurityData)
     """
     def normalize(self):
         start = self.df.Open.iloc[0]
@@ -154,7 +154,7 @@ class SecurityData:
     end             The ending index of the slice (int)
 
     If end is None, the data is sliced from start until the end of the data
-    returns         The new SecurityData object corresponding to the sliced data (SecurityData)
+    returns the new SecurityData object corresponding to the sliced data (SecurityData)
     """
     def slice(self, start, end=None):
         if end == None:
@@ -167,7 +167,7 @@ class SecurityData:
     end             The ending date of the slice (datetime.date)
 
     If end is None, the data is sliced from start until the end of the data
-    returns         The new SecurityData object corresponding to the sliced data (SecurityData)
+    returns the new SecurityData object corresponding to the sliced data (SecurityData)
     """
     def slice_loc(self, start, end=None):
         if end == None:
@@ -212,6 +212,10 @@ class SecurityData:
     def sharpe(self, rfr=0, col="Close"):
         return (self.ret(col, True) - rfr) / self.vol(col, True)
 
+    """
+    SecurityData.invert() 
+    returns the short of the stock (SecurityData)
+    """
     def invert(self):
         df = self.df
         principal = df.Close.iloc[0]

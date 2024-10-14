@@ -5,7 +5,7 @@ class SecurityGroup:
     """
     SecurityGroup.__init__() constructs the SecurityGroup object
     securities          The SecurityData objects to group (*SecurityData)
-    returns             The constructed SecurityGroup object (SecurityGroup)
+    returns the constructed SecurityGroup object (SecurityGroup)
     """
     def __init__(self, *securities):
         self._securities = list(securities)
@@ -14,7 +14,7 @@ class SecurityGroup:
     """
     SecurityGroup.from_tickers() constructs the SecurityGroup object using tickers
     tickers             The tickers to scrape data from (*str)
-    returns             The constructed SecurityGroup object
+    returns the constructed SecurityGroup object (SecurityGroup)
     """
     def from_tickers(*tickers):
         securities = []
@@ -28,7 +28,7 @@ class SecurityGroup:
 
     """
     SecurityGroup.normalize() normalizes all the security data to start at 1
-    returns             The corresponding SecurityData object (SecurityData)
+    returns the corresponding SecurityData object (SecurityData)
     """
     def normalize(self):
         securities = [sec.normalize() for sec in self._securities]
@@ -82,7 +82,7 @@ class SecurityGroup:
     # ============= Data Manipulation Methods =============
     """
     SecurityGroup.trim() trims all the data so it starts on the same day and has the same len
-    returns             The corresponding SecurityData object (SecurityData)
+    returns the corresponding SecurityData object (SecurityData)
     """
     def trim_data(self):
         lens = [sec.days for sec in self._securities]
@@ -94,7 +94,7 @@ class SecurityGroup:
 
     """
     SecurityGroup.overlap() trims all the data so it only includes rows with overlapping dates
-    returns             The corresponding SecurityData object (SecurityData)
+    returns The corresponding SecurityData object (SecurityData)
     """
     def overlap(self):
         overlapIndex = self._securities[0].df.index
@@ -111,6 +111,7 @@ class SecurityGroup:
 
     """
     SecurityGroup.copy() copies the SecurityGroup object
+    returns the copy (SecurityGroup)
     """
     def copy(self):
         return SecurityGroup(*self.securities)
@@ -119,6 +120,7 @@ class SecurityGroup:
     SecurityGroup.portfolio() gets the backtest of a portfolio based on a certain weight vector
     weights             The weight vector (list)
     rebalanceWeeks      How many weeks to wait until rebalance (int)
+    returns the backtest (StockData object)
     """
     def portfolio(self, weights, rebalanceWeeks=0):
         c = self.copy().overlap().normalize()
