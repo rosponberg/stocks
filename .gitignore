@@ -2,7 +2,7 @@
 data/
 main.py
 *.csv
-10y_tickers
+tickers
 
 __pycache__/
 *.py[cod]
