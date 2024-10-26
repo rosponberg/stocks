@@ -1,3 +1,5 @@
+# MONEY PRINTAH
+# Made by Rowan Sponberg
 import numpy as np
 import pandas as pd
 import yfinance as yf
@@ -6,7 +8,7 @@ from datetime import date
 from math import floor, log10, sqrt
 from scipy.optimize import minimize
 
-PROJECT_FOLDER = os.path.join("~/", "Goatberg")
+PROJECT_FOLDER = os.path.join("~/", "MoneyPrinter")
 DATA_FOLDER = os.path.join(PROJECT_FOLDER, "data")
 
 class Security:
@@ -34,7 +36,7 @@ class Security:
         self._len = len(df.index)
         self._years = (difference.days + difference.seconds / 86400) / 365.2425
         self._days = floor(self._years * 252)
-        self._periodsPerYear = round(252 * self.len / self.days)
+        self._periodsPerYear = round(252 * self.len / self.days) # Work with the monthly backtest for backtest.org
 
     """
     Security.from_scrape() returns the historical data of a security scraped from yahoo finance
@@ -224,8 +226,6 @@ class Security:
         principal = df.Close.iloc[0]
         df = 2*principal - df
         return Security("Short " + self.ticker, df)
-
-
 
 class SecurityGroup:
     """
