@@ -405,24 +405,9 @@ class SecurityGroup:
     """
     def portfolio(self, weights, rebalanceWeeks=0, epsilon=0.01):
         c = self.copy().overlap().normalize()
-        dfs = [s.df for s in c.securities]
-
-        pct = 0
-        for i in range(len(weights)):
-            df = c.securities[i].df
-            p = df.pct_change()
-
-            p.iloc[0, 0] = df.iloc[0, 0] - 1
-            p.iloc[0, 1] = df.iloc[0, 1] - 1
-            p.iloc[0, 2] = df.iloc[0, 2] - 1
-            p.iloc[0, 3] = df.iloc[0, 3] - 1
-            pct += p * weights[i]
-
-        pct += 1
-        pct.iloc[0, 4] = 0
 
         # Get Rebalance
-        index = dfs[0].index
+        index = c.securities[0].df.index
         rebalanceDays = [index[0]]
         lastRebalance = index[0]
 
@@ -434,19 +419,22 @@ class SecurityGroup:
         
         if rebalanceDays[-1] != index[-1]:
             rebalanceDays.append(index[-1])
-
         
         lastClose = 1
         sections = []
         for i in range(len(rebalanceDays) - 1):
-            section = pct.loc[rebalanceDays[i]:rebalanceDays[i+1]].iloc[:-1]
-            section = section.cumprod()
-            section /= section.iloc[0, 0]
-            section *= lastClose
-            lastClose = section.iloc[-1, 3]
-            sections.append(section)
+            overallSection = 1
+            for j in range(len(weights)):
+                df = c.securities[j].df
+                section = df.loc[rebalanceDays[i]:rebalanceDays[i+1]].iloc[:-1]
+                section /= section.iloc[0, 0]
+                w = weights[j]
+                section = section * w - w 
+                overallSection += section
 
-        #print(sections)
+            overallSection *= lastClose
+            lastClose = overallSection.iloc[-1, 3]
+            sections.append(overallSection)
 
         df = pd.concat(sections)
         portfolio = Security("pfolio", df)
