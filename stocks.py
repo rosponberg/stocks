@@ -359,7 +359,7 @@ class SecurityGroup:
     """
     def iterative_optimize(self, sampleSize, iters, ret=0, vol=None, bounds=(0,1), rebalanceWeeks=12, verbose=True, epsilon=0.01, secs=[]):
         weights = []
-        maxSharpe = 0
+        maxSharpe = -10000
 
         for trial in range(iters):
             sampleSecs = np.random.choice(self.securities, size=sampleSize).tolist()
@@ -372,8 +372,9 @@ class SecurityGroup:
 
             mptSharpe = sampleMPT.sharpe(sampleWeights)
 
-            sampleSecs = [sampleSecs[i] for i in range(len(sampleWeights)) if sampleWeights[i] >= epsilon]
-            sampleWeights = [sampleWeights[i] for i in range(len(sampleWeights)) if sampleWeights[i] >= epsilon]
+            sampleSecs = [sampleSecs[i] for i in range(len(sampleWeights)) if abs(sampleWeights[i]) >= epsilon]
+            sampleWeights = [sampleWeights[i] for i in range(len(sampleWeights)) if abs(sampleWeights[i]) >= epsilon]
+            print(sum([abs(v) for v in sampleWeights]))
 
             backtest = SecurityGroup(*sampleSecs).portfolio(sampleWeights, rebalanceWeeks)
             realSharpe = backtest.sharpe()
@@ -402,15 +403,26 @@ class SecurityGroup:
     rebalanceWeeks      How many weeks to wait until rebalance (int)
     returns the backtest (StockData object)
     """
-    def portfolio(self, weights, rebalanceWeeks=0):
+    def portfolio(self, weights, rebalanceWeeks=0, epsilon=0.01):
         c = self.copy().overlap().normalize()
-        dfs = [sec.df for sec in c.securities]
-        dfs = [dfs[i] for i in range(len(dfs)) if weights[i] > 0]
-        weights = [w for w in weights if w > 0]
+        dfs = [s.df for s in c.securities]
 
-        cols = dfs[0].columns.to_list()
+        pct = 0
+        for i in range(len(weights)):
+            df = c.securities[i].df
+            p = df.pct_change()
+
+            p.iloc[0, 0] = df.iloc[0, 0] - 1
+            p.iloc[0, 1] = df.iloc[0, 1] - 1
+            p.iloc[0, 2] = df.iloc[0, 2] - 1
+            p.iloc[0, 3] = df.iloc[0, 3] - 1
+            pct += p * weights[i]
+
+        pct += 1
+        pct.iloc[0, 4] = 0
+
+        # Get Rebalance
         index = dfs[0].index
-
         rebalanceDays = [index[0]]
         lastRebalance = index[0]
 
@@ -423,25 +435,20 @@ class SecurityGroup:
         if rebalanceDays[-1] != index[-1]:
             rebalanceDays.append(index[-1])
 
-        value = len(dfs)
-        dfs = [dfs[i] * weights[i] / dfs[i].Open.iloc[0] for i in range(len(dfs))]
-        sections = [[] for _ in dfs]
-        for day in rebalanceDays:
-            value = 0
-            for i in range(len(dfs)):
-                section = dfs[i].loc[:day].iloc[:-1]
-                sections[i].append(section)
-                dfs[i] = dfs[i].loc[day:]
-                value += dfs[i].Open.iloc[0]
-            
-            for i in range(len(dfs)):
-                dfs[i] /= dfs[i].Open.iloc[0]
-                dfs[i] *= value
-                dfs[i] *= weights[i]
+        
+        lastClose = 1
+        sections = []
+        for i in range(len(rebalanceDays) - 1):
+            section = pct.loc[rebalanceDays[i]:rebalanceDays[i+1]].iloc[:-1]
+            section = section.cumprod()
+            section /= section.iloc[0, 0]
+            section *= lastClose
+            lastClose = section.iloc[-1, 3]
+            sections.append(section)
 
-        sections = [pd.concat(s) for s in sections]
-        data = sum([df.to_numpy() for df in sections])
-        df = pd.DataFrame(data, columns=cols, index=sections[0].index)
+        #print(sections)
+
+        df = pd.concat(sections)
         portfolio = Security("pfolio", df)
         return portfolio
 
@@ -554,8 +561,8 @@ class ModernPortfolioTheory(SecurityGroup):
     """
     def optimize(self, ret=0, vol=None, bounds=(0,1)):
         sumToOneConstraint = {
-            "type": "eq",
-            "fun": lambda w: np.sum(w) - 1
+            "type": "ineq",
+            "fun": lambda w: 1 - sum([abs(v) for v in w]) 
         }
         returnConstraint = {
             "type": "ineq",
